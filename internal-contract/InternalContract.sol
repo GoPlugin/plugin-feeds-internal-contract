@@ -102,10 +102,10 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
    */
   function requestData(address _caller)
     external
+    ensureAuthorizedRequester()
     returns(uint256 _aggreqid)
   {
     //Check the total Credits available for the user to perform the transaction
-    require(msg.sender==_caller,"Unauthorized Request");
     uint256 _a_totalCredits = plidbs[_caller].totalcredits;
     require(totalOracles > 0,"INVALID ORACLES LENGTH");
     require(_a_totalCredits >= (ORACLE_PAYMENT * totalOracles),"NO_SUFFICIENT_CREDITS");
