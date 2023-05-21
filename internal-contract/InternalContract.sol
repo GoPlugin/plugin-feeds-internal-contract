@@ -17,16 +17,21 @@ import "@goplugin/contracts/src/v0.4/vendor/SafeMathPlugin.sol";
 contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   using SafeMathPlugin for uint256;
   using SignedSafeMath for int256;
+
+  //Aggregate RequestId
   uint256 public _aggRequestId;
+
+  //Oracle Fee 
   uint256 private ORACLE_PAYMENT = 0.1 * 10**18;
 
+  //Struct to store the Answers 
   struct Answer {
     uint128 minimumResponses;
     uint128 maxResponses;
     int256[] responses;
   }
 
-  //struct to keep track of PLI Deposits
+  //Struct to keep track of PLI Deposits
   struct PLIDatabase{
     address depositor;
     uint256 totalcredits;
@@ -34,8 +39,11 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
 
   mapping(address => PLIDatabase) public plidbs;
 
+  //Events definition
   event ResponseReceived(int256 indexed response, uint256 indexed answerId, address indexed sender);
   event oracleFeeModified(address indexed owner,uint256 indexed oraclefee,uint256 timestamp);
+  event PLIDeposited(address indexed depositer,uint256 depositedValue,uint256 timestamp);
+  event EnabledAuthorizer(address indexed owner,address authorizer);
 
   int256 private currentAnswerValue;
   uint256 private updatedTimestampValue;
@@ -92,6 +100,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
         msg.sender,
         _totalCredits
       );
+      emit PLIDeposited(msg.sender,_value,block.timestamp);
       return true;
   }
 
@@ -100,16 +109,16 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
    * @dev This example does not include request parameters. Reference any documentation
    * associated with the Job IDs used to determine the required parameters per-request.
    */
-  function requestData(address _caller)
+  function requestData()
     external
     ensureAuthorizedRequester()
     returns(uint256 _aggreqid)
   {
     //Check the total Credits available for the user to perform the transaction
-    uint256 _a_totalCredits = plidbs[_caller].totalcredits;
+    uint256 _a_totalCredits = plidbs[msg.sender].totalcredits;
     require(totalOracles > 0,"INVALID ORACLES LENGTH");
     require(_a_totalCredits >= (ORACLE_PAYMENT * totalOracles),"NO_SUFFICIENT_CREDITS");
-    plidbs[_caller].totalcredits = _a_totalCredits - (ORACLE_PAYMENT * totalOracles) ;
+    plidbs[msg.sender].totalcredits = _a_totalCredits - (ORACLE_PAYMENT * totalOracles) ;
 
     Plugin.Request memory request;
     bytes32 requestId;
@@ -205,6 +214,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
     onlyOwner()
   {
     authorizedRequesters[_requester] = _allowed;
+    emit EnabledAuthorizer(msg.sender,_requester);
   }
 
   /**
