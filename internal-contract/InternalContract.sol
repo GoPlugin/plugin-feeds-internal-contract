@@ -43,7 +43,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   event ResponseReceived(int256 indexed response, uint256 indexed answerId, address indexed sender);
   event oracleFeeModified(address indexed owner,uint256 indexed oraclefee,uint256 timestamp);
   event PLIDeposited(address indexed depositer,uint256 depositedValue,uint256 timestamp);
-  event EnabledAuthorizer(address indexed owner,address authorizer);
+  event EnabledAuthorizer(address indexed owner,address indexed customerContractAddress, address indexed walletAddress, bool isAllowed, uint256 timestamp);
 
   int256 private currentAnswerValue;
   uint256 private updatedTimestampValue;
@@ -60,6 +60,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   mapping(uint256 => Answer) private answers;
   mapping(uint256 => int256) private currentAnswers;
   mapping(uint256 => uint256) private updatedTimestamps;
+  mapping(address => mapping(address=>bool)) public authorizedWallets;
   uint256 private totalOracles;
 
   uint256 constant private MAX_ORACLE_COUNT = 28;
@@ -109,16 +110,17 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
    * @dev This example does not include request parameters. Reference any documentation
    * associated with the Job IDs used to determine the required parameters per-request.
    */
-  function requestData()
+  function requestData(address _caller)
     external
     ensureAuthorizedRequester()
     returns(uint256 _aggreqid)
   {
     //Check the total Credits available for the user to perform the transaction
-    uint256 _a_totalCredits = plidbs[msg.sender].totalcredits;
+    require(authorizedWallets[msg.sender][_caller] == true || msg.sender == owner ,"request from unauthorized wallet address");
+    uint256 _a_totalCredits = plidbs[_caller].totalcredits;
     require(totalOracles > 0,"INVALID ORACLES LENGTH");
     require(_a_totalCredits >= (ORACLE_PAYMENT * totalOracles),"NO_SUFFICIENT_CREDITS");
-    plidbs[msg.sender].totalcredits = _a_totalCredits - (ORACLE_PAYMENT * totalOracles) ;
+    plidbs[_caller].totalcredits = _a_totalCredits - (ORACLE_PAYMENT * totalOracles) ;
 
     Plugin.Request memory request;
     bytes32 requestId;
@@ -205,16 +207,18 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   /**
    * @notice Called by the owner to permission other addresses to generate new
    * requests to oracles.
-   * @param _requester the address whose permissions are being set
+   * @param _customerContractAddress the address whose permissions are being set
+   * @param _walletAddress the address of the wallet whose permissions are being set
    * @param _allowed boolean that determines whether the requester is
    * permissioned or not
    */
-  function setAuthorization(address _requester, bool _allowed)
+  function setAuthorization(address _customerContractAddress,address _walletAddress, bool _allowed)
     external
     onlyOwner()
   {
-    authorizedRequesters[_requester] = _allowed;
-    emit EnabledAuthorizer(msg.sender,_requester);
+    authorizedRequesters[_customerContractAddress] = _allowed;
+    authorizedWallets[_customerContractAddress][_walletAddress] = _allowed;
+    emit EnabledAuthorizer(msg.sender,_customerContractAddress,_walletAddress,_allowed,block.timestamp);
   }
 
   /**
