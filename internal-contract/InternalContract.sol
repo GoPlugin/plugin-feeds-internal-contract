@@ -44,6 +44,10 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   event oracleFeeModified(address indexed owner,uint256 indexed oraclefee,uint256 timestamp);
   event PLIDeposited(address indexed depositer,uint256 depositedValue,uint256 timestamp);
   event EnabledAuthorizer(address indexed owner,address indexed customerContractAddress, address indexed walletAddress, bool isAllowed, uint256 timestamp);
+  event TransferredPLI(address indexed owner,address indexed recipient,uint256 amount,uint256 timestamp);
+  event DestroyedContract(address indexed owner,uint256 timestamp);
+  event UpdatedRequestDetails(uint256 minimumResponses,string[] jobIds,address[] oracles,uint256 timestamp);
+
 
   int256 private currentAnswerValue;
   uint256 private updatedTimestampValue;
@@ -187,6 +191,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
     minimumResponses = _minimumResponses;
     jobIds = _jobIds;
     oracles = _oracles;
+    emit UpdatedRequestDetails(minimumResponses,jobIds,oracles,block.timestamp);
   }
 
   /**
@@ -202,6 +207,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   {
     PliTokenInterface pliToken = PliTokenInterface(pluginTokenAddress());
     require(pliToken.transfer(_recipient, _amount), "PLI transfer failed");
+    emit TransferredPLI(msg.sender, _recipient, _amount,block.timestamp);
   }
 
   /**
@@ -262,6 +268,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   {
     PliTokenInterface pliToken = PliTokenInterface(pluginTokenAddress());
     transferPLI(owner, pliToken.balanceOf(address(this)));
+    emit DestroyedContract(owner,block.timestamp);
     selfdestruct(owner);
   }
 
