@@ -1,17 +1,17 @@
 pragma solidity ^0.4.24;
 
 interface IInvokeOracle {
-    function requestData() external returns (uint256 requestId);
+    function requestData(address _authorizedWalletAddress) external returns (uint256 requestId);
 
     function showPrice(uint256 _reqid) external view returns (uint256 answer, uint256 updatedOn);
 }
 
 contract ConsumerContract {
-    address CONTRACTADDR = 0xEB119Be8Fe23Fe889ca891Cc3F4B007093F3f1de;
+    address CONTRACTADDR = pass_internal_contract_address_here;
     uint256 public requestId;
-    uint256 private owner;
+    address private owner;
 
-    constructor(){
+    constructor() public{
         owner = msg.sender;
     }
 
@@ -19,7 +19,7 @@ contract ConsumerContract {
     //Note, below function will not trigger if you do not put PLI in above contract address
     function getPriceInfo() external returns (uint256) {
         require(msg.sender==owner,"Only owner can trigger this");
-        (requestId) = IInvokeOracle(CONTRACTADDR).requestData();
+        (requestId) = IInvokeOracle(CONTRACTADDR).requestData({_authorizedWalletAddress:owner});
         return requestId;
     }
 
