@@ -49,6 +49,7 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
   event UpdatedRequestDetails(uint256 minimumResponses,string[] jobIds,address[] oracles,uint256 timestamp);
 
 
+
   int256 private currentAnswerValue;
   uint256 private updatedTimestampValue;
   uint256 private latestCompletedAnswer;
@@ -519,6 +520,18 @@ contract Aggregator is AggregatorInterface, PluginClient, Ownable {
     assembly { 
       result := mload(add(source, 32))
     }
+  }
+
+    /**
+   * @notice Called by the owner of the customer contract.
+   */
+  function registerCustomerContract(bool _allowed) public {
+      require(tx.origin != 0,"invalid wallet address");
+      require(msg.sender != 0,"invalid customer contract address");
+      require(msg.sender != tx.origin,"customer contract and wallet address cannot be same");
+      authorizedWallets[msg.sender][tx.origin] = _allowed;
+      authorizedRequesters[msg.sender] = _allowed;
+      emit EnabledAuthorizer(msg.sender,msg.sender,tx.origin,_allowed,block.timestamp);
   }
 
 }
