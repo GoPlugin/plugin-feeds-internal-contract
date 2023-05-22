@@ -4,6 +4,8 @@ interface IInvokeOracle {
     function requestData(address _authorizedWalletAddress) external returns (uint256 requestId);
 
     function showPrice(uint256 _reqid) external view returns (uint256 answer, uint256 updatedOn);
+
+    function registerCustomerContract(bool _allowed) external;
 }
 
 contract ConsumerContract {
@@ -13,6 +15,7 @@ contract ConsumerContract {
 
     constructor() public{
         owner = msg.sender;
+        IInvokeOracle(CONTRACTADDR).registerCustomerContract(true); //set it to true always
     }
 
     //Fund this contract with sufficient PLI, before you trigger below function.
